@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <title>Invoice Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ===== Nav Bar ===== -->
+  <header class="nav-bar">
+    <h1 id="navTitle">Invoice Tracker</h1>
+    <p class="nav-sub" id="navSubtitle">0 suppliers · 0 invoices</p>
+  </header>
+
+  <!-- ==================== ENTRY ==================== -->
+  <div id="tab-entry" class="page active">
+
+    <div id="entryEmpty" class="empty hidden">
+      <div class="empty-ico"><svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="#48484a"><path d="M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H4V5h16v14zm-8-2h2v-4h4v-2h-4V7h-2v4H8v2h4v4z"/></svg></div>
+      <p class="empty-title">No Suppliers Yet</p>
+      <p class="empty-sub">Add a supplier to start tracking invoices</p>
+      <button class="btn-tint" onclick="switchTab('suppliers');openSupplierModal()">Add Supplier</button>
+    </div>
+
+    <div id="entryForm" class="hidden">
+      <section class="group">
+        <div class="group-title">New Invoice</div>
+        <div class="group-box">
+          <div class="field"><label>Supplier</label><select id="entrySupplier"><option value="">Select</option></select></div>
+          <div class="field"><label>Date</label><input type="date" id="entryDate"></div>
+          <div class="field"><label>Amount</label><input type="number" id="entryAmount" placeholder="0.00" inputmode="decimal" step="0.01"></div>
+          <div class="field"><label>Note</label><input type="text" id="entryNote" placeholder="Optional"></div>
+        </div>
+      </section>
+
+      <section class="group">
+        <div class="group-title">Payment Method</div>
+        <div class="seg" id="entryPayment">
+          <button class="seg-btn" data-method="Cash" onclick="selectEntryPayment('Cash')">Cash</button>
+          <button class="seg-btn" data-method="Card" onclick="selectEntryPayment('Card')">Card</button>
+          <button class="seg-btn" data-method="Transfer" onclick="selectEntryPayment('Transfer')">Transfer</button>
+          <button class="seg-btn" data-method="Transferred" onclick="selectEntryPayment('Transferred')">Done</button>
+        </div>
+      </section>
+
+      <div class="pad-h">
+        <button class="btn-primary" id="addInvoiceBtn" onclick="addInvoice()" disabled>Add Invoice</button>
+      </div>
+
+      <section class="group hidden" id="recentSection">
+        <div class="group-title">Recent</div>
+        <div class="group-box" id="recentList"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ==================== SUPPLIERS ==================== -->
+  <div id="tab-suppliers" class="page">
+    <div class="page-action">
+      <button class="btn-link" onclick="openSupplierModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#30d158"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+        Add New
+      </button>
+    </div>
+    <div id="suppliersEmpty" class="empty hidden">
+      <div class="empty-ico"><svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="#48484a"><path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/></svg></div>
+      <p class="empty-title">No Suppliers</p>
+      <p class="empty-sub">Tap "Add New" to get started</p>
+    </div>
+    <section class="group" id="suppliersList"></section>
+  </div>
+
+  <!-- ==================== REPORTS ==================== -->
+  <div id="tab-reports" class="page">
+    <section class="group">
+      <div class="group-title">Filters</div>
+      <div class="group-box filter-grid">
+        <div class="field half"><label>Supplier</label><select id="filterSupplier" onchange="renderReports()"><option value="all">All</option></select></div>
+        <div class="field half"><label>Payment</label><select id="filterPayment" onchange="renderReports()"><option value="all">All</option><option value="Cash">Cash</option><option value="Card">Card</option><option value="Transfer">Transfer</option><option value="Transferred">Transferred</option></select></div>
+        <div class="field half"><label>Month</label><select id="filterMonth" onchange="renderReports()"><option value="all">All</option><option value="0">Jan</option><option value="1">Feb</option><option value="2">Mar</option><option value="3">Apr</option><option value="4">May</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Aug</option><option value="8">Sep</option><option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option></select></div>
+        <div class="field half"><label>Year</label><select id="filterYear" onchange="renderReports()"><option value="all">All</option></select></div>
+      </div>
+    </section>
+
+    <div class="total-card">
+      <span class="total-label" id="statsLabel">Total · 0 invoices</span>
+      <span class="total-amount" id="statsAmount">0.00</span>
+      <span class="total-cur">SAR</span>
+    </div>
+
+    <div class="pad-h hidden" id="exportExcelBtn">
+      <button class="btn-primary blue" onclick="exportExcel()">Export to Excel</button>
+    </div>
+
+    <section class="group hidden" id="breakdownSection">
+      <div class="group-title">By Supplier</div>
+      <div class="group-box" id="supplierBreakdown"></div>
+    </section>
+
+    <section class="group hidden" id="invoicesSection">
+      <div class="group-title">All Invoices</div>
+      <div id="reportInvoices"></div>
+    </section>
+  </div>
+
+  <!-- ==================== SETTINGS ==================== -->
+  <div id="tab-settings" class="page">
+
+    <section class="group">
+      <div class="group-title">Storage</div>
+      <div class="group-box">
+        <div class="storage-info">
+          <div class="storage-bar"><div class="storage-fill" id="storageBarFill"></div></div>
+          <div class="storage-text"><span id="storageUsed">Calculating...</span><span id="storagePercent"></span></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-cell"><span class="stat-num" id="settingSuppCount">0</span><span class="stat-lbl">Suppliers</span></div>
+          <div class="stat-cell"><span class="stat-num" id="settingInvCount">0</span><span class="stat-lbl">Invoices</span></div>
+          <div class="stat-cell"><span class="stat-num" id="settingTotalAmt">0</span><span class="stat-lbl">Total SAR</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-title">Data</div>
+      <div class="group-box">
+        <div class="row" onclick="exportData()">
+          <div class="row-ico green"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg></div>
+          <div class="row-text"><div class="row-title">Backup Data</div><div class="row-sub">Export JSON file</div></div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#48484a"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </div>
+        <div class="row" onclick="importData()">
+          <div class="row-ico blue"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg></div>
+          <div class="row-text"><div class="row-title">Restore Data</div><div class="row-sub">Import JSON backup</div></div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#48484a"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </div>
+        <div class="row" onclick="exportExcelAll()">
+          <div class="row-ico purple"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg></div>
+          <div class="row-text"><div class="row-title">Export All to Excel</div><div class="row-sub">Full .xlsx export</div></div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#48484a"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-title danger-t">Danger Zone</div>
+      <div class="group-box danger-box">
+        <div class="row" onclick="clearAllInvoices()">
+          <div class="row-ico red"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></div>
+          <div class="row-text"><div class="row-title danger-t">Clear All Invoices</div><div class="row-sub">Keeps suppliers</div></div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#48484a"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </div>
+        <div class="row" onclick="clearAllData()">
+          <div class="row-ico red"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
+          <div class="row-text"><div class="row-title danger-t">Clear Everything</div><div class="row-sub">Start fresh</div></div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#48484a"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer-text">Invoice Tracker v2.0<br>All data stored on-device</p>
+  </div>
+
+</div>
+
+<!-- Supplier Modal -->
+<div class="modal-bg" id="supplierModal">
+  <div class="modal-sheet">
+    <div class="modal-pill"></div>
+    <div class="modal-head">
+      <h2 id="supplierModalTitle">New Supplier</h2>
+      <button class="btn-link" onclick="closeModal('supplierModal')">Cancel</button>
+    </div>
+    <section class="group">
+      <div class="group-box">
+        <div class="field"><label>Name</label><input type="text" id="suppNameInput" placeholder="e.g. Al Noor Bakery"></div>
+      </div>
+    </section>
+    <section class="group">
+      <div class="group-title">Default Payment</div>
+      <div class="seg" id="suppPayment">
+        <button class="seg-btn active" data-method="Cash" onclick="selectSuppPayment('Cash')">Cash</button>
+        <button class="seg-btn" data-method="Card" onclick="selectSuppPayment('Card')">Card</button>
+        <button class="seg-btn" data-method="Transfer" onclick="selectSuppPayment('Transfer')">Transfer</button>
+        <button class="seg-btn" data-method="Transferred" onclick="selectSuppPayment('Transferred')">Done</button>
+      </div>
+    </section>
+    <div class="pad-h">
+      <button class="btn-primary" id="saveSuppBtn" onclick="saveSupplier()">Add Supplier</button>
+      <button class="btn-destruct hidden" id="deleteSuppBtn" onclick="deleteSupplier()">Delete Supplier</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invoice Modal -->
+<div class="modal-bg" id="invoiceModal">
+  <div class="modal-sheet">
+    <div class="modal-pill"></div>
+    <div class="modal-head">
+      <h2>Invoice Details</h2>
+      <button class="btn-link" onclick="closeModal('invoiceModal')">Done</button>
+    </div>
+    <div id="invoiceDetailBody"></div>
+    <div class="pad-h"><button class="btn-destruct" onclick="deleteInvoice()">Delete Invoice</button></div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal-alert">
+    <div class="modal-pill"></div>
+    <h3 id="confirmTitle">Are you sure?</h3>
+    <p id="confirmMsg">This cannot be undone.</p>
+    <div class="alert-btns">
+      <button class="alert-btn" onclick="closeModal('confirmModal')">Cancel</button>
+      <button class="alert-btn alert-danger" id="confirmAction">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"><span id="toastMsg"></span></div>
+
+<!-- Tab Bar -->
+<nav class="tab-bar">
+  <button class="tab active" data-tab="entry" onclick="switchTab('entry')">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+    <span>Entry</span>
+  </button>
+  <button class="tab" data-tab="suppliers" onclick="switchTab('suppliers')">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/></svg>
+    <span>Suppliers</span>
+  </button>
+  <button class="tab" data-tab="reports" onclick="switchTab('reports')">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
+    <span>Reports</span>
+  </button>
+  <button class="tab" data-tab="settings" onclick="switchTab('settings')">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 00-.48-.41h-3.84a.48.48 0 00-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.48.48 0 00.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.6 3.6 0 0112 15.6z"/></svg>
+    <span>Settings</span>
+  </button>
+</nav>
+
+<script src="excel-export.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
