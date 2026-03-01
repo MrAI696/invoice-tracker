@@ -1,7 +1,12 @@
 /* ============================================
    Invoice Tracker v2 — App Logic
-   IndexedDB Storage + Settings + Enhanced UX
+   IndexedDB + Settings + Enhanced UX
    ============================================ */
+
+// ===== INLINE SVG CONSTANTS =====
+const SVG = {
+  chevron: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(234,234,240,0.28)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>'
+};
 
 // ===== DATABASE =====
 const DB_NAME = 'InvoiceTrackerDB';
@@ -86,17 +91,11 @@ function fmtShort(n) {
   return fmt(n);
 }
 
-function today() {
-  return new Date().toISOString().split('T')[0];
-}
+function today() { return new Date().toISOString().split('T')[0]; }
 
-function genId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
-function payClass(method) {
-  return method ? method.toLowerCase() : 'cash';
-}
+function payClass(method) { return method ? method.toLowerCase() : 'cash'; }
 
 function $(id) { return document.getElementById(id); }
 
@@ -106,11 +105,10 @@ function showToast(msg, type = 'success') {
   if (type === 'warn') t.classList.add('toast-warn');
   if (type === 'error') t.classList.add('toast-error');
 
-  // Update icon
-  const iconUse = t.querySelector('.toast-icon-svg use');
-  if (type === 'success') iconUse.setAttribute('href', '#ico-check');
-  else if (type === 'warn') iconUse.setAttribute('href', '#ico-alert');
-  else if (type === 'error') iconUse.setAttribute('href', '#ico-x');
+  const ico = $('toastIcon');
+  if (type === 'success') ico.innerHTML = '&#10003;';
+  else if (type === 'warn') ico.innerHTML = '&#9888;';
+  else ico.innerHTML = '&#10007;';
 
   t.querySelector('.toast-msg').textContent = msg;
   t.classList.add('show');
@@ -146,7 +144,6 @@ async function init() {
   switchTab('entry');
   updateStats();
 
-  // Event listeners
   $('entryAmount').addEventListener('input', updateAddBtn);
   $('entrySupplier').addEventListener('change', onSupplierSelect);
 }
@@ -189,7 +186,6 @@ function renderEntry() {
     updateAddBtn();
   }
 
-  // Recent
   const recent = invoices.slice(0, 8);
   $('recentSection').classList.toggle('hidden', recent.length === 0);
   $('recentList').innerHTML = recent.map(inv => `
@@ -204,7 +200,7 @@ function renderEntry() {
       </div>
       <div class="row-right">
         <span class="row-amount">${fmt(inv.amount)}</span>
-        <svg class="icon-sm chevron"><use href="#ico-chevron"/></svg>
+        ${SVG.chevron}
       </div>
     </div>
   `).join('');
@@ -282,7 +278,7 @@ function renderSuppliers() {
             </div>
           </div>
           <div class="row-right">
-            <svg class="icon-sm chevron"><use href="#ico-chevron"/></svg>
+            ${SVG.chevron}
           </div>
         </div>`;
     }).join('') + '</div></div>';
@@ -360,32 +356,25 @@ async function deleteSupplier() {
 
   closeModal('supplierModal');
   setTimeout(() => {
-    showConfirm(
-      'Delete Supplier',
-      `Delete "${name}"? Invoices will remain in history.`,
-      'Delete',
-      async () => {
-        await dbDelete('suppliers', editingSupplierId);
-        suppliers = suppliers.filter(s => s.id !== editingSupplierId);
-        renderSuppliers();
-        renderEntry();
-        updateStats();
-        showToast('Supplier removed', 'warn');
-      }
-    );
+    showConfirm('Delete Supplier', `Delete "${name}"? Invoices will remain in history.`, 'Delete', async () => {
+      await dbDelete('suppliers', editingSupplierId);
+      suppliers = suppliers.filter(s => s.id !== editingSupplierId);
+      renderSuppliers();
+      renderEntry();
+      updateStats();
+      showToast('Supplier removed', 'warn');
+    });
   }, 400);
 }
 
 // ===== REPORTS TAB =====
 function renderReports() {
-  // Supplier filter
   const fs = $('filterSupplier');
   const curFS = fs.value;
   fs.innerHTML = '<option value="all">All</option>' +
     suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
   fs.value = curFS;
 
-  // Year filter
   const fy = $('filterYear');
   const curFY = fy.value || new Date().getFullYear().toString();
   const yrs = new Set(invoices.map(i => new Date(i.date).getFullYear()));
@@ -394,7 +383,6 @@ function renderReports() {
   fy.innerHTML = '<option value="all">All</option>' + sorted.map(y => `<option value="${y}">${y}</option>`).join('');
   fy.value = curFY;
 
-  // Apply filters
   const fSupp = $('filterSupplier').value;
   const fPay = $('filterPayment').value;
   const fMonth = $('filterMonth').value;
@@ -413,10 +401,8 @@ function renderReports() {
   $('statsLabel').textContent = `Total · ${filtered.length} invoice${filtered.length !== 1 ? 's' : ''}`;
   $('statsAmount').textContent = fmt(total);
 
-  // Export button
   $('exportExcelBtn').classList.toggle('hidden', filtered.length === 0);
 
-  // Breakdown by supplier
   const map = {};
   filtered.forEach(inv => {
     if (!map[inv.supplierId]) map[inv.supplierId] = { name: inv.supplierName, total: 0, count: 0 };
@@ -448,7 +434,6 @@ function renderReports() {
     $('breakdownSection').classList.add('hidden');
   }
 
-  // All invoices
   const allEl = $('reportInvoices');
   if (filtered.length > 0) {
     allEl.innerHTML = '<div class="card" style="margin:0"><div class="list-group">' + filtered.map(inv => `
@@ -463,7 +448,7 @@ function renderReports() {
         </div>
         <div class="row-right">
           <span class="row-amount">${fmt(inv.amount)}</span>
-          <svg class="icon-sm chevron"><use href="#ico-chevron"/></svg>
+          ${SVG.chevron}
         </div>
       </div>
     `).join('') + '</div></div>';
@@ -477,7 +462,6 @@ function renderReports() {
     }
   }
 
-  // Store for export
   window._filtered = filtered;
   window._suppTotals = suppTotals;
   window._total = total;
@@ -489,8 +473,6 @@ function renderSettings() {
   $('settingInvCount').textContent = invoices.length;
   const total = invoices.reduce((s, i) => s + i.amount, 0);
   $('settingTotalAmt').textContent = fmtShort(total);
-
-  // Estimate storage
   estimateStorage();
 }
 
@@ -505,7 +487,6 @@ async function estimateStorage() {
       $('storagePercent').textContent = `${pct}%`;
       $('storageBarFill').style.width = `${Math.min(pct, 100)}%`;
     } else {
-      // Fallback: rough estimate from data size
       const dataStr = JSON.stringify({ suppliers, invoices });
       const bytes = new Blob([dataStr]).size;
       const kb = (bytes / 1024).toFixed(1);
@@ -542,11 +523,7 @@ function openInvoiceModal(id) {
       <span class="detail-label">Payment</span>
       <span class="detail-value"><span class="pay-badge ${payClass(inv.payment)}">${inv.payment}</span></span>
     </div>
-    ${inv.note ? `
-    <div class="detail-row">
-      <span class="detail-label">Note</span>
-      <span class="detail-value">${inv.note}</span>
-    </div>` : ''}
+    ${inv.note ? `<div class="detail-row"><span class="detail-label">Note</span><span class="detail-value">${inv.note}</span></div>` : ''}
   `;
   openModal('invoiceModal');
 }
@@ -557,30 +534,20 @@ async function deleteInvoice() {
   const id = viewingInvoiceId;
 
   setTimeout(() => {
-    showConfirm(
-      'Delete Invoice',
-      'This invoice will be permanently removed.',
-      'Delete',
-      async () => {
-        await dbDelete('invoices', id);
-        invoices = invoices.filter(i => i.id !== id);
-        updateStats();
-        if (currentTab === 'entry') renderEntry();
-        if (currentTab === 'reports') renderReports();
-        showToast('Invoice deleted', 'warn');
-      }
-    );
+    showConfirm('Delete Invoice', 'This invoice will be permanently removed.', 'Delete', async () => {
+      await dbDelete('invoices', id);
+      invoices = invoices.filter(i => i.id !== id);
+      updateStats();
+      if (currentTab === 'entry') renderEntry();
+      if (currentTab === 'reports') renderReports();
+      showToast('Invoice deleted', 'warn');
+    });
   }, 400);
 }
 
 // ===== MODALS =====
-function openModal(id) {
-  $(id).classList.add('open');
-}
-
-function closeModal(id) {
-  $(id).classList.remove('open');
-}
+function openModal(id) { $(id).classList.add('open'); }
+function closeModal(id) { $(id).classList.remove('open'); }
 
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) {
@@ -588,7 +555,7 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// ===== EXPORT EXCEL (Reports Tab) =====
+// ===== EXPORT EXCEL =====
 function exportExcel() {
   const filtered = window._filtered || [];
   const suppTotals = window._suppTotals || [];
@@ -601,7 +568,6 @@ function exportExcel() {
   }
 }
 
-// ===== EXPORT ALL EXCEL (Settings) =====
 function exportExcelAll() {
   if (ExcelExport.exportAll(suppliers, invoices)) {
     showToast('Full Excel exported');
@@ -610,46 +576,29 @@ function exportExcelAll() {
   }
 }
 
-// ===== CLEAR ALL INVOICES =====
+// ===== CLEAR DATA =====
 function clearAllInvoices() {
-  if (invoices.length === 0) {
-    showToast('No invoices to clear', 'warn');
-    return;
-  }
-  showConfirm(
-    'Clear All Invoices',
-    `This will permanently delete all ${invoices.length} invoices. Suppliers will be kept.`,
-    'Clear Invoices',
-    async () => {
-      await dbClear('invoices');
-      invoices = [];
-      updateStats();
-      renderSettings();
-      showToast('All invoices cleared', 'warn');
-    }
-  );
+  if (invoices.length === 0) { showToast('No invoices to clear', 'warn'); return; }
+  showConfirm('Clear All Invoices', `This will permanently delete all ${invoices.length} invoices. Suppliers will be kept.`, 'Clear Invoices', async () => {
+    await dbClear('invoices');
+    invoices = [];
+    updateStats();
+    renderSettings();
+    showToast('All invoices cleared', 'warn');
+  });
 }
 
-// ===== CLEAR ALL DATA =====
 function clearAllData() {
-  if (invoices.length === 0 && suppliers.length === 0) {
-    showToast('No data to clear', 'warn');
-    return;
-  }
-  showConfirm(
-    'Clear All Data',
-    `This will permanently delete ${suppliers.length} suppliers and ${invoices.length} invoices. This cannot be undone.`,
-    'Delete Everything',
-    async () => {
-      await dbClear('suppliers');
-      await dbClear('invoices');
-      suppliers = [];
-      invoices = [];
-      updateStats();
-      renderSettings();
-      showToast('All data cleared', 'warn');
-    }
-  );
+  if (invoices.length === 0 && suppliers.length === 0) { showToast('No data to clear', 'warn'); return; }
+  showConfirm('Clear All Data', `This will permanently delete ${suppliers.length} suppliers and ${invoices.length} invoices. This cannot be undone.`, 'Delete Everything', async () => {
+    await dbClear('suppliers');
+    await dbClear('invoices');
+    suppliers = [];
+    invoices = [];
+    updateStats();
+    renderSettings();
+    showToast('All data cleared', 'warn');
+  });
 }
 
 // ===== JSON BACKUP =====
@@ -680,32 +629,24 @@ function importData() {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      if (!data.suppliers || !data.invoices) {
-        showToast('Invalid backup file', 'error');
-        return;
-      }
+      if (!data.suppliers || !data.invoices) { showToast('Invalid backup file', 'error'); return; }
 
-      showConfirm(
-        'Restore Backup',
-        `This will replace all current data with ${data.suppliers.length} suppliers and ${data.invoices.length} invoices.`,
-        'Restore',
-        async () => {
-          await dbClear('suppliers');
-          await dbClear('invoices');
-          for (const s of data.suppliers) await dbPut('suppliers', s);
-          for (const i of data.invoices) await dbPut('invoices', i);
+      showConfirm('Restore Backup', `This will replace all current data with ${data.suppliers.length} suppliers and ${data.invoices.length} invoices.`, 'Restore', async () => {
+        await dbClear('suppliers');
+        await dbClear('invoices');
+        for (const s of data.suppliers) await dbPut('suppliers', s);
+        for (const i of data.invoices) await dbPut('invoices', i);
 
-          suppliers = data.suppliers;
-          invoices = data.invoices.sort((a, b) => {
-            if (b.date !== a.date) return b.date.localeCompare(a.date);
-            return (b.createdAt || '').localeCompare(a.createdAt || '');
-          });
+        suppliers = data.suppliers;
+        invoices = data.invoices.sort((a, b) => {
+          if (b.date !== a.date) return b.date.localeCompare(a.date);
+          return (b.createdAt || '').localeCompare(a.createdAt || '');
+        });
 
-          switchTab(currentTab);
-          updateStats();
-          showToast(`Imported ${suppliers.length} suppliers, ${invoices.length} invoices`);
-        }
-      );
+        switchTab(currentTab);
+        updateStats();
+        showToast(`Imported ${suppliers.length} suppliers, ${invoices.length} invoices`);
+      });
     } catch (err) {
       showToast('Error reading file', 'error');
       console.error(err);
