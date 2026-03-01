@@ -1,6 +1,6 @@
 /* ============================================
-   Invoice Tracker — App Logic
-   IndexedDB Storage + Import/Export
+   Invoice Tracker v2 — App Logic
+   IndexedDB Storage + Settings + Enhanced UX
    ============================================ */
 
 // ===== DATABASE =====
@@ -74,11 +74,16 @@ let selectedSuppPayment = 'Cash';
 let viewingInvoiceId = null;
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const METHODS = ['Cash', 'Card', 'Transfer', 'Transferred'];
 
 // ===== HELPERS =====
 function fmt(n) {
   return Number(n).toLocaleString('en-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtShort(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return fmt(n);
 }
 
 function today() {
@@ -93,16 +98,41 @@ function payClass(method) {
   return method ? method.toLowerCase() : 'cash';
 }
 
-function showToast(msg, icon = '✓') {
-  const t = document.getElementById('toast');
-  t.querySelector('.toast-icon').textContent = icon;
+function $(id) { return document.getElementById(id); }
+
+function showToast(msg, type = 'success') {
+  const t = $('toast');
+  t.className = 'toast';
+  if (type === 'warn') t.classList.add('toast-warn');
+  if (type === 'error') t.classList.add('toast-error');
+
+  // Update icon
+  const iconUse = t.querySelector('.toast-icon-svg use');
+  if (type === 'success') iconUse.setAttribute('href', '#ico-check');
+  else if (type === 'warn') iconUse.setAttribute('href', '#ico-alert');
+  else if (type === 'error') iconUse.setAttribute('href', '#ico-x');
+
   t.querySelector('.toast-msg').textContent = msg;
   t.classList.add('show');
   clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-function $(id) { return document.getElementById(id); }
+// ===== CONFIRM DIALOG =====
+let confirmCallback = null;
+
+function showConfirm(title, msg, actionText, callback) {
+  $('confirmTitle').textContent = title;
+  $('confirmMsg').textContent = msg;
+  $('confirmAction').textContent = actionText;
+  confirmCallback = callback;
+  $('confirmAction').onclick = () => {
+    closeModal('confirmModal');
+    if (confirmCallback) confirmCallback();
+    confirmCallback = null;
+  };
+  openModal('confirmModal');
+}
 
 // ===== INIT =====
 async function init() {
@@ -133,13 +163,13 @@ function switchTab(tab) {
   $('tab-' + tab).classList.add('active');
   document.querySelector(`.tab-item[data-tab="${tab}"]`).classList.add('active');
 
-  // Update header title
-  const titles = { entry: 'Invoice Tracker', suppliers: 'Suppliers', reports: 'Reports' };
+  const titles = { entry: 'Invoice Tracker', suppliers: 'Suppliers', reports: 'Reports', settings: 'Settings' };
   $('navTitle').textContent = titles[tab];
 
   if (tab === 'entry') renderEntry();
   if (tab === 'suppliers') renderSuppliers();
   if (tab === 'reports') renderReports();
+  if (tab === 'settings') renderSettings();
   updateStats();
 }
 
@@ -166,11 +196,15 @@ function renderEntry() {
     <div class="list-row" onclick="openInvoiceModal('${inv.id}')">
       <div class="row-left">
         <div class="row-label">${inv.supplierName}</div>
-        <div class="row-detail">${inv.date} <span class="pay-badge ${payClass(inv.payment)}">${inv.payment}</span></div>
+        <div class="row-detail">
+          ${inv.date}
+          <span class="pay-badge ${payClass(inv.payment)}">${inv.payment}</span>
+          ${inv.note ? '<span style="color:var(--text-tertiary)">' + inv.note + '</span>' : ''}
+        </div>
       </div>
       <div class="row-right">
         <span class="row-amount">${fmt(inv.amount)}</span>
-        <span class="chevron">›</span>
+        <svg class="icon-sm chevron"><use href="#ico-chevron"/></svg>
       </div>
     </div>
   `).join('');
@@ -235,7 +269,7 @@ async function addInvoice() {
 function renderSuppliers() {
   $('suppliersEmpty').classList.toggle('hidden', suppliers.length > 0);
   $('suppliersList').innerHTML = suppliers.length === 0 ? '' :
-    '<div class="list-group">' + suppliers.map(s => {
+    '<div class="card" style="margin:0 16px"><div class="list-group">' + suppliers.map(s => {
       const invs = invoices.filter(i => i.supplierId === s.id);
       const total = invs.reduce((sum, i) => sum + i.amount, 0);
       return `
@@ -244,14 +278,14 @@ function renderSuppliers() {
             <div class="row-label">${s.name}</div>
             <div class="row-detail">
               <span class="pay-badge ${payClass(s.defaultPayment)}">${s.defaultPayment}</span>
-              ${invs.length ? ` · ${invs.length} invoices · ${fmt(total)} SAR` : ''}
+              ${invs.length ? `<span>${invs.length} invoices · ${fmt(total)} SAR</span>` : '<span>No invoices</span>'}
             </div>
           </div>
           <div class="row-right">
-            <span class="chevron">›</span>
+            <svg class="icon-sm chevron"><use href="#ico-chevron"/></svg>
           </div>
         </div>`;
-    }).join('') + '</div>';
+    }).join('') + '</div></div>';
 }
 
 function openSupplierModal(id) {
@@ -298,7 +332,6 @@ async function saveSupplier() {
       suppliers[idx].name = name;
       suppliers[idx].defaultPayment = selectedSuppPayment;
       await dbPut('suppliers', suppliers[idx]);
-      // Update invoice names
       for (let inv of invoices) {
         if (inv.supplierId === editingSupplierId) {
           inv.supplierName = name;
@@ -322,15 +355,25 @@ async function saveSupplier() {
 
 async function deleteSupplier() {
   if (!editingSupplierId) return;
-  if (!confirm('Delete this supplier? Invoices will remain in history.')) return;
+  const s = suppliers.find(x => x.id === editingSupplierId);
+  const name = s ? s.name : 'this supplier';
 
-  await dbDelete('suppliers', editingSupplierId);
-  suppliers = suppliers.filter(s => s.id !== editingSupplierId);
   closeModal('supplierModal');
-  renderSuppliers();
-  renderEntry();
-  updateStats();
-  showToast('Supplier removed', '🗑');
+  setTimeout(() => {
+    showConfirm(
+      'Delete Supplier',
+      `Delete "${name}"? Invoices will remain in history.`,
+      'Delete',
+      async () => {
+        await dbDelete('suppliers', editingSupplierId);
+        suppliers = suppliers.filter(s => s.id !== editingSupplierId);
+        renderSuppliers();
+        renderEntry();
+        updateStats();
+        showToast('Supplier removed', 'warn');
+      }
+    );
+  }, 400);
 }
 
 // ===== REPORTS TAB =====
@@ -408,18 +451,22 @@ function renderReports() {
   // All invoices
   const allEl = $('reportInvoices');
   if (filtered.length > 0) {
-    allEl.innerHTML = '<div class="list-group">' + filtered.map(inv => `
+    allEl.innerHTML = '<div class="card" style="margin:0"><div class="list-group">' + filtered.map(inv => `
       <div class="list-row" onclick="openInvoiceModal('${inv.id}')">
         <div class="row-left">
           <div class="row-label">${inv.supplierName}</div>
-          <div class="row-detail">${inv.date} <span class="pay-badge ${payClass(inv.payment)}">${inv.payment}</span>${inv.note ? ' · ' + inv.note : ''}</div>
+          <div class="row-detail">
+            ${inv.date}
+            <span class="pay-badge ${payClass(inv.payment)}">${inv.payment}</span>
+            ${inv.note ? '<span style="color:var(--text-tertiary)">' + inv.note + '</span>' : ''}
+          </div>
         </div>
         <div class="row-right">
           <span class="row-amount">${fmt(inv.amount)}</span>
-          <span class="chevron">›</span>
+          <svg class="icon-sm chevron"><use href="#ico-chevron"/></svg>
         </div>
       </div>
-    `).join('') + '</div>';
+    `).join('') + '</div></div>';
     $('invoicesSection').classList.remove('hidden');
   } else {
     allEl.innerHTML = '';
@@ -434,6 +481,42 @@ function renderReports() {
   window._filtered = filtered;
   window._suppTotals = suppTotals;
   window._total = total;
+}
+
+// ===== SETTINGS TAB =====
+function renderSettings() {
+  $('settingSuppCount').textContent = suppliers.length;
+  $('settingInvCount').textContent = invoices.length;
+  const total = invoices.reduce((s, i) => s + i.amount, 0);
+  $('settingTotalAmt').textContent = fmtShort(total);
+
+  // Estimate storage
+  estimateStorage();
+}
+
+async function estimateStorage() {
+  try {
+    if (navigator.storage && navigator.storage.estimate) {
+      const est = await navigator.storage.estimate();
+      const usedMB = (est.usage / (1024 * 1024)).toFixed(2);
+      const quotaMB = (est.quota / (1024 * 1024)).toFixed(0);
+      const pct = ((est.usage / est.quota) * 100).toFixed(1);
+      $('storageUsed').textContent = `${usedMB} MB used of ${quotaMB} MB`;
+      $('storagePercent').textContent = `${pct}%`;
+      $('storageBarFill').style.width = `${Math.min(pct, 100)}%`;
+    } else {
+      // Fallback: rough estimate from data size
+      const dataStr = JSON.stringify({ suppliers, invoices });
+      const bytes = new Blob([dataStr]).size;
+      const kb = (bytes / 1024).toFixed(1);
+      $('storageUsed').textContent = `~${kb} KB in use`;
+      $('storagePercent').textContent = '';
+      $('storageBarFill').style.width = '2%';
+    }
+  } catch (e) {
+    $('storageUsed').textContent = 'Unable to estimate';
+    $('storagePercent').textContent = '';
+  }
 }
 
 // ===== INVOICE MODAL =====
@@ -470,13 +553,24 @@ function openInvoiceModal(id) {
 
 async function deleteInvoice() {
   if (!viewingInvoiceId) return;
-  await dbDelete('invoices', viewingInvoiceId);
-  invoices = invoices.filter(i => i.id !== viewingInvoiceId);
   closeModal('invoiceModal');
-  updateStats();
-  if (currentTab === 'entry') renderEntry();
-  if (currentTab === 'reports') renderReports();
-  showToast('Invoice deleted', '🗑');
+  const id = viewingInvoiceId;
+
+  setTimeout(() => {
+    showConfirm(
+      'Delete Invoice',
+      'This invoice will be permanently removed.',
+      'Delete',
+      async () => {
+        await dbDelete('invoices', id);
+        invoices = invoices.filter(i => i.id !== id);
+        updateStats();
+        if (currentTab === 'entry') renderEntry();
+        if (currentTab === 'reports') renderReports();
+        showToast('Invoice deleted', 'warn');
+      }
+    );
+  }, 400);
 }
 
 // ===== MODALS =====
@@ -488,54 +582,80 @@ function closeModal(id) {
   $(id).classList.remove('open');
 }
 
-// Close modal when tapping backdrop
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) {
     e.target.classList.remove('open');
   }
 });
 
-// ===== EXPORT TO EXCEL =====
+// ===== EXPORT EXCEL (Reports Tab) =====
 function exportExcel() {
   const filtered = window._filtered || [];
   const suppTotals = window._suppTotals || [];
   const total = window._total || 0;
-
-  const data = filtered.map(inv => ({
-    Date: inv.date,
-    Supplier: inv.supplierName,
-    Amount: inv.amount,
-    'Payment Method': inv.payment,
-    Note: inv.note || ''
-  }));
-  data.push({ Date: '', Supplier: 'TOTAL', Amount: total, 'Payment Method': '', Note: '' });
-
-  const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{ wch: 12 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 25 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Invoices');
-
-  // Summary sheet
-  if (suppTotals.length) {
-    const summary = suppTotals.map(([_, s]) => ({
-      Supplier: s.name, 'Total Amount': s.total, 'Invoice Count': s.count
-    }));
-    const ws2 = XLSX.utils.json_to_sheet(summary);
-    ws2['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 14 }];
-    XLSX.utils.book_append_sheet(wb, ws2, 'Summary');
-  }
-
   const fm = $('filterMonth').value;
   const fy = $('filterYear').value;
-  const monthStr = fm !== 'all' ? MONTHS[parseInt(fm)] : 'All';
-  XLSX.writeFile(wb, `Invoices_${fy}_${monthStr}.xlsx`);
-  showToast('Excel exported', '📥');
+
+  if (ExcelExport.exportFiltered(filtered, suppTotals, total, fm, fy)) {
+    showToast('Excel exported');
+  }
 }
 
-// ===== IMPORT / EXPORT DATA (JSON BACKUP) =====
+// ===== EXPORT ALL EXCEL (Settings) =====
+function exportExcelAll() {
+  if (ExcelExport.exportAll(suppliers, invoices)) {
+    showToast('Full Excel exported');
+  } else {
+    showToast('No data to export', 'warn');
+  }
+}
+
+// ===== CLEAR ALL INVOICES =====
+function clearAllInvoices() {
+  if (invoices.length === 0) {
+    showToast('No invoices to clear', 'warn');
+    return;
+  }
+  showConfirm(
+    'Clear All Invoices',
+    `This will permanently delete all ${invoices.length} invoices. Suppliers will be kept.`,
+    'Clear Invoices',
+    async () => {
+      await dbClear('invoices');
+      invoices = [];
+      updateStats();
+      renderSettings();
+      showToast('All invoices cleared', 'warn');
+    }
+  );
+}
+
+// ===== CLEAR ALL DATA =====
+function clearAllData() {
+  if (invoices.length === 0 && suppliers.length === 0) {
+    showToast('No data to clear', 'warn');
+    return;
+  }
+  showConfirm(
+    'Clear All Data',
+    `This will permanently delete ${suppliers.length} suppliers and ${invoices.length} invoices. This cannot be undone.`,
+    'Delete Everything',
+    async () => {
+      await dbClear('suppliers');
+      await dbClear('invoices');
+      suppliers = [];
+      invoices = [];
+      updateStats();
+      renderSettings();
+      showToast('All data cleared', 'warn');
+    }
+  );
+}
+
+// ===== JSON BACKUP =====
 async function exportData() {
   const data = {
-    version: 1,
+    version: 2,
     exportDate: new Date().toISOString(),
     suppliers: suppliers,
     invoices: invoices
@@ -547,7 +667,7 @@ async function exportData() {
   a.download = `InvoiceTracker_Backup_${today()}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast('Backup exported', '💾');
+  showToast('Backup exported');
 }
 
 function importData() {
@@ -561,28 +681,33 @@ function importData() {
       const text = await file.text();
       const data = JSON.parse(text);
       if (!data.suppliers || !data.invoices) {
-        showToast('Invalid backup file', '⚠️');
+        showToast('Invalid backup file', 'error');
         return;
       }
-      if (!confirm(`This will replace all current data with:\n${data.suppliers.length} suppliers\n${data.invoices.length} invoices\n\nContinue?`)) return;
 
-      // Clear and import
-      await dbClear('suppliers');
-      await dbClear('invoices');
-      for (const s of data.suppliers) await dbPut('suppliers', s);
-      for (const i of data.invoices) await dbPut('invoices', i);
+      showConfirm(
+        'Restore Backup',
+        `This will replace all current data with ${data.suppliers.length} suppliers and ${data.invoices.length} invoices.`,
+        'Restore',
+        async () => {
+          await dbClear('suppliers');
+          await dbClear('invoices');
+          for (const s of data.suppliers) await dbPut('suppliers', s);
+          for (const i of data.invoices) await dbPut('invoices', i);
 
-      suppliers = data.suppliers;
-      invoices = data.invoices.sort((a, b) => {
-        if (b.date !== a.date) return b.date.localeCompare(a.date);
-        return (b.createdAt || '').localeCompare(a.createdAt || '');
-      });
+          suppliers = data.suppliers;
+          invoices = data.invoices.sort((a, b) => {
+            if (b.date !== a.date) return b.date.localeCompare(a.date);
+            return (b.createdAt || '').localeCompare(a.createdAt || '');
+          });
 
-      switchTab(currentTab);
-      updateStats();
-      showToast(`Imported ${suppliers.length} suppliers, ${invoices.length} invoices`);
+          switchTab(currentTab);
+          updateStats();
+          showToast(`Imported ${suppliers.length} suppliers, ${invoices.length} invoices`);
+        }
+      );
     } catch (err) {
-      showToast('Error reading file', '⚠️');
+      showToast('Error reading file', 'error');
       console.error(err);
     }
   };
