@@ -35,14 +35,18 @@
   -webkit-touch-callout: none;
 }
 
-html, body {
+html {
+  /* Lock html to exact screen — no overflow, no extra space */
+  height: 100%;
+  background: var(--bg);
+}
+
+body {
+  /* body matches html exactly */
   height: 100%;
   background: var(--bg);
   overflow: hidden;
   overscroll-behavior: none;
-}
-
-body {
   font-family: var(--font);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -74,14 +78,13 @@ input {
 
 /* ── App Shell ── */
 #app {
-  /* --app-h is set by JS to window.innerHeight — the only reliable
-     value in iOS PWA standalone mode. Falls back to 100vh. */
+  /* Takes 100% of body height — no viewport units, no fixed positioning.
+     Tab bar is a flex child so it's ALWAYS at the physical bottom. */
+  height: 100%;
   width: 100%;
-  height: var(--app-h, 100vh);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  position: relative;
 }
 
 /* ── Header ── */
@@ -153,18 +156,17 @@ input {
 .main {
   flex: 1;
   padding: 12px 20px;
-  /* Clear the FAB button above the tab bar */
-  padding-bottom: calc(80px + var(--tab-h) + env(safe-area-inset-bottom));
+  /* Only needs to clear the FAB — tab bar is a flex sibling, not overlapping */
+  padding-bottom: 90px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  /* Content scrolls inside — not the body */
   overscroll-behavior: contain;
 }
 
-/* Non-main tabs don't need FAB clearance */
+/* Non-main tabs have no FAB */
 .tab-view[data-view="suppliers"],
 .tab-view[data-view="settings"] {
-  padding-bottom: calc(16px + var(--tab-h) + env(safe-area-inset-bottom));
+  padding-bottom: 16px;
 }
 
 /* ── Empty State ── */
@@ -267,16 +269,17 @@ input {
 
 /* ── Tab Bar ── */
 .tab-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  /* Natural flex child — sits at the bottom of #app automatically.
+     No fixed positioning, no viewport math, no iOS bugs. */
+  flex-shrink: 0;
+  width: 100%;
   background: var(--surface);
   border-top: 1px solid var(--border);
   display: flex;
   align-items: flex-start;
   padding-top: 8px;
-  padding-bottom: max(env(safe-area-inset-bottom), 8px);
+  /* Push content above home indicator */
+  padding-bottom: env(safe-area-inset-bottom, 8px);
   z-index: 19;
 }
 

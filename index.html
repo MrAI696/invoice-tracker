@@ -55,42 +55,30 @@
     <div class="main tab-view" data-view="settings" hidden>
       <div id="settings-container"></div>
     </div>
+    <!-- Tab Bar — inside #app as last flex child, no fixed positioning needed -->
+    <nav class="tab-bar">
+      <button class="tab-btn tab-btn--active" data-tab="main">
+        <span class="tab-icon" id="tab-icon-main"></span>
+        <span class="tab-label">الرئيسية</span>
+      </button>
+      <button class="tab-btn" data-tab="suppliers">
+        <span class="tab-icon" id="tab-icon-suppliers"></span>
+        <span class="tab-label">الموردون</span>
+      </button>
+      <button class="tab-btn" data-tab="settings">
+        <span class="tab-icon" id="tab-icon-settings"></span>
+        <span class="tab-label">الإعدادات</span>
+      </button>
+    </nav>
   </div>
 
-  <!-- Tab Bar -->
-  <nav class="tab-bar">
-    <button class="tab-btn tab-btn--active" data-tab="main">
-      <span class="tab-icon" id="tab-icon-main"></span>
-      <span class="tab-label">الرئيسية</span>
-    </button>
-    <button class="tab-btn" data-tab="suppliers">
-      <span class="tab-icon" id="tab-icon-suppliers"></span>
-      <span class="tab-label">الموردون</span>
-    </button>
-    <button class="tab-btn" data-tab="settings">
-      <span class="tab-icon" id="tab-icon-settings"></span>
-      <span class="tab-label">الإعدادات</span>
-    </button>
-  </nav>
-
+  <!-- FAB floats above the tab bar -->
   <div class="fab-wrap">
     <button id="fab" class="fab">
       <span id="fab-icon"></span>
       <span id="fab-label">إنشاء كشف</span>
     </button>
   </div>
-
-  <!-- iOS PWA viewport fix: sets --app-h to the real screen height -->
-  <script>
-    function setAppHeight() {
-      document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px');
-    }
-    setAppHeight();
-    window.addEventListener('resize', setAppHeight);
-    // Re-run after a tick — iOS sometimes reports wrong value on first load
-    setTimeout(setAppHeight, 100);
-    setTimeout(setAppHeight, 500);
-  </script>
 
   <script src="components/icons.js"></script>
   <script src="core/db.js"></script>
