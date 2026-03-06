@@ -45,8 +45,9 @@ const AppTabs = {
     // FAB only on main tab
     document.querySelector('.fab-wrap').style.display = tab === 'main' ? '' : 'none';
 
-    // Search bar only on main tab
+    // Search bar and title only on main tab
     document.querySelector('.search-wrap').style.display = tab === 'main' ? '' : 'none';
+    document.getElementById('app-title').style.display  = tab === 'main' ? '' : 'none';
   },
 
   _renderSuppliers() {

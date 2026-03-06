@@ -94,7 +94,6 @@ function refreshUI() {
   document.getElementById('app-title').textContent = AppI18n.t('appName');
   document.getElementById('search-input').placeholder = AppI18n.t('searchPlaceholder');
   document.getElementById('fab-label').textContent = AppI18n.t('createSheet');
-  document.getElementById('lang-btn').textContent = AppI18n.lang === 'ar' ? 'EN' : 'عربي';
   renderSheets(allSheets);
 }
 
@@ -115,10 +114,6 @@ async function init() {
   });
 
   document.getElementById('fab').addEventListener('click', openCreateModal);
-
-  document.getElementById('lang-btn').addEventListener('click', () => {
-    AppI18n.setLang(AppI18n.lang === 'ar' ? 'en' : 'ar');
-  });
 
   document.addEventListener('langChange', refreshUI);
   refreshUI();

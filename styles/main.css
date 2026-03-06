@@ -157,7 +157,7 @@ input {
   flex: 1;
   padding: 12px 20px;
   /* Extra bottom padding: FAB height + tab bar + safe area */
-  padding-bottom: calc(90px + var(--tab-h) + env(safe-area-inset-bottom));
+  padding-bottom: calc(90px + var(--tab-h) + env(safe-area-inset-bottom) * 2);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -240,7 +240,7 @@ input {
 /* ── FAB ── */
 .fab-wrap {
   position: fixed;
-  bottom: var(--tab-h); /* sits above tab bar */
+  bottom: calc(var(--tab-h) + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   z-index: 20;
