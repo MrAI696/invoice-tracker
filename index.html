@@ -41,10 +41,38 @@
           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
       </div>
     </header>
-    <main class="main">
+
+    <!-- Main tab -->
+    <main class="main tab-view" data-view="main">
       <div id="sheets-container"></div>
     </main>
+
+    <!-- Suppliers tab -->
+    <div class="main tab-view" data-view="suppliers" hidden>
+      <div id="suppliers-container"></div>
+    </div>
+
+    <!-- Settings tab -->
+    <div class="main tab-view" data-view="settings" hidden>
+      <div id="settings-container"></div>
+    </div>
   </div>
+
+  <!-- Tab Bar -->
+  <nav class="tab-bar">
+    <button class="tab-btn tab-btn--active" data-tab="main">
+      <span class="tab-icon" id="tab-icon-main"></span>
+      <span class="tab-label">الرئيسية</span>
+    </button>
+    <button class="tab-btn" data-tab="suppliers">
+      <span class="tab-icon" id="tab-icon-suppliers"></span>
+      <span class="tab-label">الموردون</span>
+    </button>
+    <button class="tab-btn" data-tab="settings">
+      <span class="tab-icon" id="tab-icon-settings"></span>
+      <span class="tab-label">الإعدادات</span>
+    </button>
+  </nav>
 
   <div class="fab-wrap">
     <button id="fab" class="fab">
@@ -59,6 +87,7 @@
   <script src="components/toast.js"></script>
   <script src="components/modal.js"></script>
   <script src="components/search.js"></script>
+  <script src="components/tabs.js"></script>
   <script src="core/app.js"></script>
 
 </body>

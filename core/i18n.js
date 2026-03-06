@@ -17,6 +17,16 @@ const AppI18n = {
       sheetCreated: 'تم إنشاء الكشف بنجاح ✓',
       sheetNameRequired: 'الرجاء إدخال اسم الكشف',
       noResults: 'لا توجد نتائج للبحث',
+      // Tabs
+      tab_main: 'الرئيسية',
+      tab_suppliers: 'الموردون',
+      tab_settings: 'الإعدادات',
+      // Suppliers
+      suppliersEmpty: 'لا يوجد موردون بعد',
+      suppliersEmptyHint: 'سيتم إضافة الموردين قريباً',
+      // Settings
+      settingsGeneral: 'عام',
+      settingsLanguage: 'اللغة',
     },
     en: {
       appName: 'My Sheets',
@@ -32,6 +42,16 @@ const AppI18n = {
       sheetCreated: 'Sheet created successfully ✓',
       sheetNameRequired: 'Please enter a sheet name',
       noResults: 'No results found',
+      // Tabs
+      tab_main: 'Home',
+      tab_suppliers: 'Suppliers',
+      tab_settings: 'Settings',
+      // Suppliers
+      suppliersEmpty: 'No suppliers yet',
+      suppliersEmptyHint: 'Suppliers will be added soon',
+      // Settings
+      settingsGeneral: 'General',
+      settingsLanguage: 'Language',
     }
   },
 

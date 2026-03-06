@@ -122,6 +122,9 @@ async function init() {
 
   document.addEventListener('langChange', refreshUI);
   refreshUI();
+
+  // Init tab system
+  AppTabs.init();
 }
 
 init();
