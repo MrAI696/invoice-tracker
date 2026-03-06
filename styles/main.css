@@ -276,9 +276,20 @@ input {
   border-top: 1px solid var(--border);
   display: flex;
   align-items: flex-start;
-  padding-top: 6px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-top: 8px;
+  padding-bottom: max(env(safe-area-inset-bottom), 8px);
   z-index: 19;
+}
+/* Bleed background below tab bar to fill any gap on iPhone */
+.tab-bar::after {
+  content: '';
+  position: absolute;
+  bottom: -80px;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: var(--surface);
+  z-index: -1;
 }
 
 .tab-btn {
