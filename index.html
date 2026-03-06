@@ -2,10 +2,22 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
+
+  <!-- Viewport - critical for mobile -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- PWA / Fullscreen -->
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="كشوفاتي" />
+
+  <!-- Theme color for Android Chrome -->
   <meta name="theme-color" content="#0E0E0F" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+
   <title>كشوفاتي</title>
   <link rel="stylesheet" href="styles/main.css" />
 </head>
@@ -28,7 +40,8 @@
       </div>
       <div class="search-wrap">
         <span class="search-icon"></span>
-        <input id="search-input" type="search" placeholder="ابحث عن كشف..." autocomplete="off" />
+        <input id="search-input" type="search" placeholder="ابحث عن كشف..."
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
       </div>
     </header>
     <main class="main">
