@@ -1,56 +1,53 @@
-// core/db.js — IndexedDB wrapper
+// core/db.js — localStorage wrapper (works on all devices including iOS PWA)
 const AppDB = {
-  db: null,
 
   open() {
-    return new Promise((resolve, reject) => {
-      const req = indexedDB.open('invoiceApp', 1);
-
-      req.onupgradeneeded = (e) => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains('sheets')) {
-          db.createObjectStore('sheets', { keyPath: 'id', autoIncrement: true });
-        }
-      };
-
-      req.onsuccess = (e) => { AppDB.db = e.target.result; resolve(); };
-      req.onerror = () => reject(req.error);
-    });
+    // Nothing to open with localStorage, just return resolved
+    return Promise.resolve();
   },
 
-  _store(name, mode = 'readonly') {
-    return AppDB.db.transaction(name, mode).objectStore(name);
+  _getStore(store) {
+    try {
+      return JSON.parse(localStorage.getItem('appdb_' + store) || '[]');
+    } catch (e) {
+      return [];
+    }
+  },
+
+  _saveStore(store, data) {
+    localStorage.setItem('appdb_' + store, JSON.stringify(data));
   },
 
   add(store, data) {
-    return new Promise((res, rej) => {
-      const req = AppDB._store(store, 'readwrite').add({ ...data, createdAt: Date.now() });
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => rej(req.error);
+    return new Promise((res) => {
+      const items = AppDB._getStore(store);
+      const id = Date.now() + Math.floor(Math.random() * 1000);
+      const newItem = { ...data, id, createdAt: Date.now() };
+      items.push(newItem);
+      AppDB._saveStore(store, items);
+      res(id);
     });
   },
 
   getAll(store) {
-    return new Promise((res, rej) => {
-      const req = AppDB._store(store).getAll();
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => rej(req.error);
+    return new Promise((res) => {
+      res(AppDB._getStore(store));
     });
   },
 
   delete(store, id) {
-    return new Promise((res, rej) => {
-      const req = AppDB._store(store, 'readwrite').delete(id);
-      req.onsuccess = () => res();
-      req.onerror = () => rej(req.error);
+    return new Promise((res) => {
+      const items = AppDB._getStore(store).filter(i => i.id !== id);
+      AppDB._saveStore(store, items);
+      res();
     });
   },
 
   update(store, data) {
-    return new Promise((res, rej) => {
-      const req = AppDB._store(store, 'readwrite').put(data);
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => rej(req.error);
+    return new Promise((res) => {
+      const items = AppDB._getStore(store).map(i => i.id === data.id ? data : i);
+      AppDB._saveStore(store, items);
+      res(data.id);
     });
   }
 };
