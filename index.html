@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
 
-  <!-- Viewport - critical for mobile -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <!-- Disable zoom completely -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 
   <!-- PWA / Fullscreen -->
   <meta name="mobile-web-app-capable" content="yes" />
@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="كشوفاتي" />
 
-  <!-- Theme color for Android Chrome -->
+  <!-- Theme color for Android -->
   <meta name="theme-color" content="#0E0E0F" />
 
   <!-- PWA Manifest -->
@@ -23,15 +23,12 @@
 </head>
 <body>
 
-  <!-- Toasts -->
   <div id="toast-container"></div>
 
-  <!-- Modal -->
   <div id="modal-overlay">
     <div id="modal-sheet"></div>
   </div>
 
-  <!-- App -->
   <div id="app">
     <header class="header">
       <div class="header-top">
@@ -49,7 +46,6 @@
     </main>
   </div>
 
-  <!-- FAB -->
   <div class="fab-wrap">
     <button id="fab" class="fab">
       <span id="fab-icon"></span>
@@ -57,7 +53,6 @@
     </button>
   </div>
 
-  <!-- Scripts — order matters -->
   <script src="components/icons.js"></script>
   <script src="core/db.js"></script>
   <script src="core/i18n.js"></script>
