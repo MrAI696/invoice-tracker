@@ -80,6 +80,18 @@
     </button>
   </div>
 
+  <!-- iOS PWA viewport fix: sets --app-h to the real screen height -->
+  <script>
+    function setAppHeight() {
+      document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px');
+    }
+    setAppHeight();
+    window.addEventListener('resize', setAppHeight);
+    // Re-run after a tick — iOS sometimes reports wrong value on first load
+    setTimeout(setAppHeight, 100);
+    setTimeout(setAppHeight, 500);
+  </script>
+
   <script src="components/icons.js"></script>
   <script src="core/db.js"></script>
   <script src="core/i18n.js"></script>
